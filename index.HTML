@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-physics-system@v4.0.1/dist/aframe-physics-system.min.js"></script>
+    <title>VR Alien Invaders - Classic Space Defense</title>
+    <style>
+        body { 
+            margin: 0; 
+            font-family: 'Courier New', monospace; 
+            background: linear-gradient(135deg, #000011, #001122);
+            overflow: hidden;
+        }
+        
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #game-hud {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #00ff00;
+            text-align: center;
+            pointer-events: auto;
+            box-shadow: 0 0 20px rgba(0,255,0,0.3);
+            min-width: 600px;
+        }
+        
+        #game-hud h2 {
+            margin: 0 0 15px 0;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+            font-size: 32px;
+            letter-spacing: 3px;
+        }
+        
+        .hud-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 12px;
+            background: rgba(0,255,0,0.1);
+            border-radius: 8px;
+            border: 1px solid #00ff00;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #00ff00;
+        }
+        
+        #lives-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.9);
+            color: #ff0000;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #ff0000;
+            pointer-events: auto;
+            font-size: 18px;
+        }
+        
+        .life-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: #ff0000;
+            margin: 0 3px;
+            border-radius: 3px;
+        }
+        
+        #controls-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #666;
+            pointer-events: auto;
+            max-width: 300px;
+        }
+        
+        #controls-info h3 {
+            margin: 0 0 10px 0;
+            color: #00ff00;
+        }
+        
+        .control-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .control-key {
+            background: #333;
+            color: #00ff00;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        #wave-announcement {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: #00ff00;
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00ff00;
+            text-align: center;
+            pointer-events: auto;
+            font-size: 28px;
+            display: none;
+            z-index: 1002;
+            box-shadow: 0 0 30px rgba(0,255,0,0.5);
+        }
+        
+        #game-over-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: white;
+            text-align: center;
+        }
+        
+        .game-over-title {
+            font-size: 48px;
+            color: #ff0000;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #ff0000;
+            letter-spacing: 3px;
+        }
+        
+        .final-stats {
+            font-size: 18px;
+            margin: 10px 0;
+            color: #00ff00;
+        }
+        
+        .restart-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .restart-btn:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+        
+        #high-score {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: #ffd700;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #ffd700;
+            pointer-events: auto;
+            font-size: 16px;
+        }
+        
+        .hidden { display: none !important; }
+        
+        /* Retro scanline effect */
+        #ui-overlay::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,255,0,0.03) 2px,
+                rgba(0,255,0,0.03) 4px
+            );
+            pointer-events: none;
+            z-index: 1001;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            #game-hud {
+                top: 10px;
+                padding: 15px;
+                min-width: 350px;
+            }
+            
+            .hud-stats {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            
+            #controls-info {
+                font-size: 12px;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Game UI Overlay -->
+    <div id="ui-overlay">
+        <!-- Game HUD -->
+        <div id="game-hud">
+            <h2>👾 ALIEN INVADERS</h2>
+            <div>Defend Earth from the alien invasion!</div>
+            <div class="hud-stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="score-display">0</div>
+                    <div class="stat-label">SCORE</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="aliens-display">0</div>
+                    <div class="stat-label">ALIENS KILLED</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="wave-display">1</div>
+                    <div class="stat-label">WAVE</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="accuracy-display">0%</div>
+                    <div class="stat-label">ACCURACY</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="power-display">NONE</div>
+                    <div class="stat-label">POWER-UP</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lives Display -->
+        <div id="lives-display">
+            <div>LIVES:</div>
+            <div id="lives-icons">
+                <span class="life-icon"></span>
+                <span class="life-icon"></span>
+                <span class="life-icon"></span>
+            </div>
+        </div>
+        
+        <!-- Controls Information -->
+        <div id="controls-info">
+            <h3>🎮 Controls</h3>
+            <div class="control-item">
+                <span>Move</span>
+                <span class="control-key">A / D</span>
+            </div>
+            <div class="control-item">
+                <span>Shoot</span>
+                <span class="control-key">SPACE</span>
+            </div>
+            <div class="control-item">
+                <span>VR Shoot</span>
+                <span class="control-key">TRIGGER</span>
+            </div>
+            <div class="control-item">
+                <span>Pause</span>
+                <span class="control-key">P</span>
+            </div>
+            <div class="control-item">
+                <span>Restart</span>
+                <span class="control-key">R</span>
+            </div>
+        </div>
+        
+        <!-- Wave Announcement -->
+        <div id="wave-announcement">
+            <div id="wave-text">WAVE 1</div>
+            <div style="font-size: 16px; margin-top: 10px;">Prepare for invasion!</div>
+        </div>
+        
+        <!-- High Score -->
+        <div id="high-score">
+            HIGH SCORE: <span id="high-score-value">0</span>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen">
+        <div class="game-over-title">👾 GAME OVER</div>
+        <div class="game-over-subtitle">Earth has been invaded!</div>
+        <div class="final-stats" id="final-score">Final Score: 0</div>
+        <div class="final-stats" id="final-wave">Wave Reached: 1</div>
+        <div class="final-stats" id="final-accuracy">Accuracy: 0%</div>
+        <div class="final-stats" id="aliens-killed">Aliens Destroyed: 0</div>
+        <button class="restart-btn" onclick="restartGame()">🚀 DEFEND AGAIN</button>
+    </div>
+
+    <a-scene 
+        background="color: #000011"
+        vr-mode-ui="enabled: true"
+        cursor="rayOrigin: mouse; fuse: false"
+        raycaster="objects: .shootable; far: 100"
+        alien-invaders-manager
+        loading="false">
+        
+        <a-assets>
+            <!-- Audio Assets -->
+            <audio id="shootSound" preload="auto"></audio>
+            <audio id="alienHitSound" preload="auto"></audio>
+            <audio id="alienShootSound" preload="auto"></audio>
+            <audio id="playerHitSound" preload="auto"></audio>
+            <audio id="powerUpSound" preload="auto"></audio>
+            <audio id="waveCompleteSound" preload="auto"></audio>
+            <audio id="gameOverSound" preload="auto"></audio>
+            <audio id="ufoSound" preload="auto"></audio>
+            <audio id="backgroundMusic" loop="true" preload="auto"></audio>
+        </a-assets>
+
+        <!-- Player Ship -->
+        <a-entity id="player" 
+                  position="0 1 3"
+                  player-ship>
+            
+            <!-- Ship Model -->
+            <a-entity id="ship-model">
+                <!-- Main body -->
+                <a-box width="0.8" height="0.2" depth="1.2" 
+                       color="#00aaff" 
+                       material="metalness: 0.8; roughness: 0.2; emissive: #0066aa; emissiveIntensity: 0.2">
+                </a-box>
+                
+                <!-- Wings -->
+                <a-box width="1.6" height="0.1" depth="0.4" 
+                       position="0 0 0.2"
+                       color="#0088cc" 
+                       material="metalness: 0.7; roughness: 0.3">
+                </a-box>
+                
+                <!-- Cockpit -->
+                <a-sphere radius="0.2" 
+                          position="0 0.2 -0.2"
+                          color="#ffffff" 
+                          material="transparent: true; opacity: 0.6">
+                </a-sphere>
+                
+                <!-- Engine glow -->
+                <a-cylinder height="0.3" radius="0.1" 
+                            position="0 0 0.8"
+                            color="#ff6600" 
+                            material="emissive: #ff6600; emissiveIntensity: 0.8">
+                    <a-animation attribute="material.emissiveIntensity"
+                                 from="0.5" to="1.2" 
+                                 dur="500" 
+                                 direction="alternate" 
+                                 repeat="indefinite">
+                    </a-animation>
+                </a-cylinder>
+            </a-entity>
+        </a-entity>
+
+        <!-- Camera -->
+        <a-entity id="cameraRig" position="0 8 10" rotation="-20 0 0">
+            <a-camera look-controls="enabled: false" 
+                      wasd-controls="enabled: false">
+                
+                <!-- Crosshair -->
+                <a-ring position="0 0 -5" 
+                        radius-inner="0.02" 
+                        radius-outer="0.04" 
+                        color="#00ff00"
+                        crosshair-feedback>
+                </a-ring>
+            </a-camera>
+            
+            <!-- VR Controllers -->
+            <a-entity laser-controls="hand: right" 
+                      raycaster="objects: .shootable"
+                      vr-controller="hand: right">
+            </a-entity>
+            <a-entity laser-controls="hand: left" 
+                      raycaster="objects: .shootable"
+                      vr-controller="hand: left">
+            </a-entity>
+        </a-entity>
+
+        <!-- Game Environment -->
+        <a-entity id="environment" space-battlefield>
+            <!-- Space background -->
+            <a-sky color="#000011" 
+                   material="shader: gradient; top
+                   material="shader: gradient; topColor: #000033; bottomColor: #000011">
+            </a-sky>
+            
+            <!-- Star field -->
+            <a-entity id="stars" star-field></a-entity>
+            
+            <!-- Ground/Base -->
+            <a-plane position="0 0 0" 
+                     rotation="-90 0 0" 
+                     width="20" 
+                     height="30" 
+                     color="#001122"
+                     material="transparent: true; opacity: 0.3; wireframe: true">
+            </a-plane>
+            
+            <!-- Defensive barriers -->
+            <a-entity id="barriers" barrier-system></a-entity>
+        </a-entity>
+
+        <!-- Alien Formation -->
+        <a-entity id="alien-formation" alien-formation></a-entity>
+
+        <!-- Projectiles Container -->
+        <a-entity id="projectiles" projectile-manager></a-entity>
+
+        <!-- Power-ups Container -->
+        <a-entity id="powerups" powerup-spawner></a-entity>
+
+        <!-- Particle Effects -->
+        <a-entity id="effects" particle-effects></a-entity>
+
+        <!-- Lighting -->
+        <a-light type="ambient" color="#002244" intensity="0.3"></a-light>
+        <a-light type="directional" 
+                 position="0 10 5" 
+                 color="#ffffff" 
+                 intensity="0.5">
+        </a-light>
+
+        <!-- Game Manager -->
+        <a-entity id="gameManager" 
+                  alien-invaders-manager
+                  audio-manager>
+        </a-entity>
+    </a-scene>
+
+    <script>
+        // Alien Invaders Game Manager
+        AFRAME.registerComponent('alien-invaders-manager', {
+            init: function() {
+                this.gameState = {
+                    score: 0,
+                    lives: 3,
+                    wave: 1,
+                    aliensKilled: 0,
+                    shotsFired: 0,
+                    gameRunning: true,
+                    isPaused: false,
+                    alienSpeed: 1,
+                    alienShootRate: 3000,
+                    powerUpActive: null,
+                    powerUpTimer: 0
+                };
+                
+                this.highScore = parseInt(localStorage.getItem('alienInvaders_highScore') || '0');
+                this.setupUI();
+                this.setupEventListeners();
+                this.startWave();
+            },
+            
+            setupUI: function() {
+                this.scoreDisplay = document.querySelector('#score-display');
+                this.aliensDisplay = document.querySelector('#aliens-display');
+                this.waveDisplay = document.querySelector('#wave-display');
+                this.accuracyDisplay = document.querySelector('#accuracy-display');
+                this.powerDisplay = document.querySelector('#power-display');
+                this.livesIcons = document.querySelector('#lives-icons');
+                this.waveAnnouncement = document.querySelector('#wave-announcement');
+                this.waveText = document.querySelector('#wave-text');
+                this.gameOverScreen = document.querySelector('#game-over-screen');
+                this.highScoreValue = document.querySelector('#high-score-value');
+                
+                this.highScoreValue.textContent = this.highScore;
+                this.updateUI();
+            },
+            
+            setupEventListeners: function() {
+                document.addEventListener('keydown', this.handleKeyDown.bind(this));
+                
+                // Game events
+                this.el.sceneEl.addEventListener('alien-killed', this.onAlienKilled.bind(this));
+                this.el.sceneEl.addEventListener('player-hit', this.onPlayerHit.bind(this));
+                this.el.sceneEl.addEventListener('shot-fired', this.onShotFired.bind(this));
+                this.el.sceneEl.addEventListener('wave-cleared', this.onWaveCleared.bind(this));
+                this.el.sceneEl.addEventListener('powerup-collected', this.onPowerUpCollected.bind(this));
+            },
+            
+            tick: function(time, timeDelta) {
+                if (!this.gameState.gameRunning || this.gameState.isPaused) return;
+                
+                this.updatePowerUps(timeDelta);
+                this.updateUI();
+            },
+            
+            handleKeyDown: function(event) {
+                switch(event.code) {
+                    case 'KeyA':
+                    case 'ArrowLeft':
+                        this.movePlayer(-1);
+                        break;
+                    case 'KeyD':
+                    case 'ArrowRight':
+                        this.movePlayer(1);
+                        break;
+                    case 'Space':
+                        event.preventDefault();
+                        this.playerShoot();
+                        break;
+                    case 'KeyP':
+                        this.togglePause();
+                        break;
+                    case 'KeyR':
+                        this.restartGame();
+                        break;
+                }
+            },
+            
+            movePlayer: function(direction) {
+                let player = document.querySelector('#player');
+                let position = player.getAttribute('position');
+                let newX = position.x + (direction * 0.5);
+                
+                // Clamp to boundaries
+                newX = Math.max(-8, Math.min(8, newX));
+                player.setAttribute('position', `${newX} ${position.y} ${position.z}`);
+            },
+            
+            playerShoot: function() {
+                if (!this.gameState.gameRunning) return;
+                
+                let projectileManager = document.querySelector('#projectiles').components['projectile-manager'];
+                projectileManager.createPlayerBullet();
+                
+                this.gameState.shotsFired++;
+                this.playSound('shoot');
+                
+                this.el.sceneEl.emit('shot-fired');
+            },
+            
+            onAlienKilled: function(event) {
+                let alienData = event.detail;
+                this.gameState.score += alienData.points;
+                this.gameState.aliensKilled++;
+                
+                this.playSound('alienHit');
+                this.createExplosion(alienData.position, '#ff4444');
+                
+                // Check if wave is complete
+                let remainingAliens = document.querySelectorAll('[alien-behavior]').length;
+                if (remainingAliens <= 1) { // 1 because the killed alien hasn't been removed yet
+                    setTimeout(() => {
+                        this.el.sceneEl.emit('wave-cleared');
+                    }, 100);
+                }
+            },
+            
+            onPlayerHit: function() {
+                this.gameState.lives--;
+                this.updateLivesDisplay();
+                this.playSound('playerHit');
+                this.createExplosion(document.querySelector('#player').getAttribute('position'), '#00aaff');
+                
+                if (this.gameState.lives <= 0) {
+                    this.gameOver();
+                } else {
+                    this.playerRespawn();
+                }
+            },
+            
+            onShotFired: function() {
+                // Already handled in playerShoot
+            },
+            
+            onWaveCleared: function() {
+                this.gameState.wave++;
+                this.gameState.score += 1000; // Wave bonus
+                
+                this.playSound('waveComplete');
+                this.showWaveAnnouncement();
+                
+                // Increase difficulty
+                this.gameState.alienSpeed += 0.2;
+                this.gameState.alienShootRate = Math.max(1000, this.gameState.alienShootRate - 200);
+                
+                setTimeout(() => {
+                    this.startWave();
+                }, 3000);
+            },
+            
+            onPowerUpCollected: function(event) {
+                let powerUpType = event.detail.type;
+                this.activatePowerUp(powerUpType);
+                this.playSound('powerUp');
+            },
+            
+            startWave: function() {
+                // Clear existing aliens and projectiles
+                this.clearGameObjects();
+                
+                // Create new alien formation
+                let formation = document.querySelector('#alien-formation').components['alien-formation'];
+                formation.createWave(this.gameState.wave, this.gameState.alienSpeed);
+                
+                this.showWaveAnnouncement();
+            },
+            
+            showWaveAnnouncement: function() {
+                this.waveText.textContent = `WAVE ${this.gameState.wave}`;
+                this.waveAnnouncement.style.display = 'block';
+                
+                setTimeout(() => {
+                    this.waveAnnouncement.style.display = 'none';
+                }, 2000);
+            },
+            
+            activatePowerUp: function(type) {
+                this.gameState.powerUpActive = type;
+                this.gameState.powerUpTimer = 10000; // 10 seconds
+                
+                let player = document.querySelector('#player').components['player-ship'];
+                
+                switch(type) {
+                    case 'rapid-fire':
+                        player.fireRate = 100;
+                        this.gameState.powerDisplay = 'RAPID FIRE';
+                        break;
+                    case 'spread-shot':
+                        player.spreadShot = true;
+                        this.gameState.powerDisplay = 'SPREAD SHOT';
+                        break;
+                    case 'shield':
+                        player.shielded = true;
+                        this.gameState.powerDisplay = 'SHIELD';
+                        this.createShieldEffect();
+                        break;
+                }
+            },
+            
+            updatePowerUps: function(timeDelta) {
+                if (this.gameState.powerUpActive) {
+                    this.gameState.powerUpTimer -= timeDelta;
+                    
+                    if (this.gameState.powerUpTimer <= 0) {
+                        this.deactivatePowerUp();
+                    }
+                }
+            },
+            
+            deactivatePowerUp: function() {
+                let player = document.querySelector('#player').components['player-ship'];
+                
+                switch(this.gameState.powerUpActive) {
+                    case 'rapid-fire':
+                        player.fireRate = 300;
+                        break;
+                    case 'spread-shot':
+                        player.spreadShot = false;
+                        break;
+                    case 'shield':
+                        player.shielded = false;
+                        this.removeShieldEffect();
+                        break;
+                }
+                
+                this.gameState.powerUpActive = null;
+                this.gameState.powerDisplay = 'NONE';
+            },
+            
+            updateUI: function() {
+                this.scoreDisplay.textContent = this.gameState.score;
+                this.aliensDisplay.textContent = this.gameState.aliensKilled;
+                this.waveDisplay.textContent = this.gameState.wave;
+                this.powerDisplay.textContent = this.gameState.powerDisplay || 'NONE';
+                
+                // Calculate accuracy
+                let accuracy = this.gameState.shotsFired > 0 ? 
+                    Math.round((this.gameState.aliensKilled / this.gameState.shotsFired) * 100) : 0;
+                this.accuracyDisplay.textContent = `${accuracy}%`;
+            },
+            
+            updateLivesDisplay: function() {
+                let icons = this.livesIcons.querySelectorAll('.life-icon');
+                icons.forEach((icon, index) => {
+                    icon.style.display = index < this.gameState.lives ? 'inline-block' : 'none';
+                });
+            },
+            
+            playerRespawn: function() {
+                let player = document.querySelector('#player');
+                
+                // Temporary invincibility
+                player.setAttribute('material', 'opacity', 0.5);
+                
+                setTimeout(() => {
+                    player.setAttribute('material', 'opacity', 1);
+                }, 2000);
+            },
+            
+            gameOver: function() {
+                this.gameState.gameRunning = false;
+                
+                // Update high score
+                if (this.gameState.score > this.highScore) {
+                    this.highScore = this.gameState.score;
+                    localStorage.setItem('alienInvaders_highScore', this.highScore.toString());
+                }
+                
+                // Show game over screen
+                let accuracy = this.gameState.shotsFired > 0 ? 
+                    Math.round((this.gameState.aliensKilled / this.gameState.shotsFired) * 100) : 0;
+                
+                document.querySelector('#final-score').textContent = `Final Score: ${this.gameState.score}`;
+                document.querySelector('#final-wave').textContent = `Wave Reached: ${this.gameState.wave}`;
+                document.querySelector('#final-accuracy').textContent = `Accuracy: ${accuracy}%`;
+                document.querySelector('#aliens-killed').textContent = `Aliens Destroyed: ${this.gameState.aliensKilled}`;
+                
+                this.gameOverScreen.style.display = 'flex';
+                this.playSound('gameOver');
+            },
+            
+            togglePause: function() {
+                this.gameState.isPaused = !this.gameState.isPaused;
+                // Pause/unpause could show a pause screen here
+            },
+            
+            restartGame: function() {
+                location.reload();
+            },
+            
+            clearGameObjects: function() {
+                // Remove aliens
+                let aliens = document.querySelectorAll('[alien-behavior]');
+                aliens.forEach(alien => {
+                    alien.parentNode.removeChild(alien);
+                });
+                
+                // Remove projectiles
+                let projectiles = document.querySelectorAll('[projectile-behavior]');
+                projectiles.forEach(projectile => {
+                    projectile.parentNode.removeChild(projectile);
+                });
+            },
+            
+            createExplosion: function(position, color) {
+                let effects = document.querySelector('#effects').components['particle-effects'];
+                effects.createExplosion(position, color);
+            },
+            
+            createShieldEffect: function() {
+                let player = document.querySelector('#player');
+                let shield = document.createElement('a-entity');
+                shield.setAttribute('id', 'player-shield');
+                shield.setAttribute('geometry', 'primitive: sphere; radius: 1.2');
+                shield.setAttribute('material', 'color: #00ffff; transparent: true; opacity: 0.3; wireframe: true');
+                shield.setAttribute('position', '0 0 0');
+                
+                shield.setAttribute('animation__pulse', {
+                    property: 'material.opacity',
+                    from: 0.3,
+                    to: 0.6,
+                    dur: 1000,
+                    dir: 'alternate',
+                    loop: true
+                });
+                
+                player.appendChild(shield);
+            },
+            
+            removeShieldEffect: function() {
+                let shield = document.querySelector('#player-shield');
+                if (shield) {
+                    shield.parentNode.removeChild(shield);
+                }
+            },
+            
+            playSound: function(soundName) {
+                let audioManager = this.el.components['audio-manager'];
+                if (audioManager) {
+                    audioManager.playSound(soundName);
+                }
+            }
+        });
+
+        // Player Ship Component
+        // Player Ship Component - FIXED SHIELD INITIALIZATION
+AFRAME.registerComponent('player-ship', {
+    init: function() {
+        this.fireRate = 300; // milliseconds between shots
+        this.lastShot = 0;
+        this.spreadShot = false;
+        this.shielded = false; // Properly initialize shield state
+        this.autoMove = false;
+        this.moveDirection = 0;
+        this.moveSpeed = 3;
+        this.health = 100; // Add health tracking
+    },
+    
+    tick: function(time, timeDelta) {
+        // Auto movement for mobile/VR
+        if (this.autoMove) {
+            let position = this.el.getAttribute('position');
+            position.x += this.moveDirection * this.moveSpeed * (timeDelta / 1000);
+            position.x = Math.max(-8, Math.min(8, position.x));
+            this.el.setAttribute('position', position);
+        }
+    },
+    
+    canShoot: function() {
+        return Date.now() - this.lastShot > this.fireRate;
+    },
+    
+    shoot: function() {
+        if (!this.canShoot()) return;
+        
+        this.lastShot = Date.now();
+        let projectileManager = document.querySelector('#projectiles').components['projectile-manager'];
+        
+        if (this.spreadShot) {
+            projectileManager.createSpreadShot();
+        } else {
+            projectileManager.createPlayerBullet();
+        }
+    },
+    
+    // Add method to take damage
+    takeDamage: function(damage = 25) {
+        if (this.shielded) return false; // No damage if shielded
+        
+        this.health -= damage;
+        console.log(`Player health: ${this.health}`);
+        
+        if (this.health <= 0) {
+            this.health = 100; // Reset health for next life
+            return true; // Indicates life lost
+        }
+        return false;
+    }
+});
+
+        // Alien Formation Component
+        AFRAME.registerComponent('alien-formation', {
+            init: function() {
+                this.aliens = [];
+                this.moveDirection = 1;
+                this.dropDistance = 1;
+                this.moveTimer = 0;
+                this.moveInterval = 1000;
+            },
+            
+            createWave: function(wave, speed) {
+                this.aliens = [];
+                let rows = Math.min(5, 2 + wave);
+                let cols = Math.min(10, 6 + wave);
+                
+                for (let row = 0; row < rows; row++) {
+                    for (let col = 0; col < cols; col++) {
+                        this.createAlien(row, col, speed);
+                    }
+                }
+            },
+            
+            createAlien: function(row, col, speed) {
+                let alien = document.createElement('a-entity');
+                let x = (col - 4.5) * 1.5;
+                let z = -5 - (row * 1.5);
+                
+                alien.setAttribute('position', `${x} 5 ${z}`);
+                alien.setAttribute('alien-behavior', `row: ${row}; speed: ${speed}`);
+                alien.setAttribute('class', 'shootable');
+                
+                // Different alien types based on row
+                this.createAlienGeometry(alien, row);
+                
+                this.el.appendChild(alien);
+                this.aliens.push(alien);
+            },
+            
+            createAlienGeometry: function(alien, row) {
+                let colors = ['#ff0000', '#ff6600', '#ffff00', '#00ff00', '#0066ff'];
+                let color = colors[row % colors.length];
+                
+                // Alien body
+                let body = document.createElement('a-entity');
+                body.setAttribute('geometry', 'primitive: box; width: 0.8; height: 0.6; depth: 0.4');
+                body.setAttribute('material', `color: ${color}; metalness: 0.6; roughness: 0.4`);
+                alien.appendChild(body);
+                
+                // Eyes
+                let eye1 = document.createElement('a-entity');
+                eye1.setAttribute('geometry', 'primitive: sphere; radius: 0.1');
+                eye1.setAttribute('material', 'color: #ff0000; emissive: #ff0000; emissiveIntensity: 0.8');
+                eye1.setAttribute('position', '-0.2 0.1 0.25');
+                alien.appendChild(eye1);
+                
+                let eye2 = document.createElement('a-entity');
+                eye2.setAttribute('geometry', 'primitive: sphere; radius: 0.1');
+                eye2.setAttribute('material', 'color: #ff0000; emissive: #ff0000; emissiveIntensity: 0.8');
+                eye2.setAttribute('position', '0.2 0.1 0.25');
+                alien.appendChild(eye2);
+                
+                // Pulsing animation
+                alien.setAttribute('animation__pulse', {
+                    property: 'scale',
+                    from: '1 1 1',
+                    to: '1.1 1.1 1.1',
+                    dur: 2000,
+                    dir: 'alternate',
+                    loop: true
+                });
+            }
+        });
+
+        // Alien Behavior Component
+        AFRAME.registerComponent('alien-behavior', {
+            schema: {
+                row: {type: 'number', default: 0},
+                speed: {type: 'number', default: 1}
+            },
+            
+            init: function() {
+                this.shootTimer = Math.random() * 5000;
+                this.points = (4 - this.data.row) * 10 + 10;
+                
+                this.el.addEventListener('click', this.onHit.bind(this));
+            },
+            
+            tick: function(time, timeDelta) {
+                this.shootTimer -= timeDelta;
+                
+                if (this.shootTimer <= 0) {
+                    this.shoot();
+                    this.shootTimer = 3000 + Math.random() * 2000;
+                }
+            },
+            
+            shoot: function() {
+                let projectileManager = document.querySelector('#projectiles').components['projectile-manager'];
+                projectileManager.createAlienBullet(this.el.getAttribute('position'));
+                
+                let gameManager = document.querySelector('#gameManager').components['alien-invaders-manager'];
+                gameManager.playSound('alienShoot');
+            },
+            
+            onHit: function() {
+                this.el.sceneEl.emit('alien-killed', {
+                    points: this.points,
+                    position: this.el.getAttribute('position')
+                });
+                
+                this.el.parentNode.removeChild(this.el);
+            }
+        });
+
+        // Projectile Manager Component
+        AFRAME.registerComponent('projectile-manager', {
+            init: function() {
+                this.projectiles = [];
+            },
+            
+            createPlayerBullet: function() {
+                let player = document.querySelector('#player');
+                let position = player.getAttribute('position');
+                
+                this.createBullet(position, {x: 0, y: 0, z: -15}, '#00ff00', 'player');
+            },
+            
+            createSpreadShot: function() {
+                let player = document.querySelector('#player');
+                let position = player.getAttribute('position');
+                
+                // Create 3 bullets in spread pattern
+                this.createBullet(position, {x: -3, y: 0, z: -15}, '#00ff00', 'player');
+                this.createBullet(position, {x: 0, y: 0, z: -15}, '#00ff00', 'player');
+                this.createBullet(position, {x: 3, y: 0, z: -15}, '#00ff00', 'player');
+            },
+            
+            createAlienBullet: function(position) {
+                this.createBullet(position, {x: 0, y: 0, z: 8}, '#ff0000', 'alien');
+            },
+            
+            createBullet: function(startPos, velocity, color, type) {
+                let bullet = document.createElement('a-entity');
+                bullet.setAttribute('position', startPos);
+                bullet.setAttribute('geometry', 'primitive: cylinder; height: 0.3; radius: 0.05');
+                bullet.setAttribute('material', `color: ${color}; emissive: ${color}; emissiveIntensity: 0.8`);
+                bullet.setAttribute('projectile-behavior', `velocity: ${velocity.x} ${velocity.y} ${velocity.z}; type: ${type}`);
+                
+                this.el.appendChild(bullet);
+                this.projectiles.push(bullet);
+            }
+        });
+
+        // Projectile Behavior Component
+        // Projectile Behavior Component - FIXED PLAYER DAMAGE
+AFRAME.registerComponent('projectile-behavior', {
+    schema: {
+        velocity: {type: 'vec3'},
+        type: {type: 'string'}
+    },
+    
+    init: function() {
+        this.hasHit = false; // Prevent multiple hits
+    },
+    
+    tick: function(time, timeDelta) {
+        if (this.hasHit) return; // Skip if already hit something
+        
+        let position = this.el.getAttribute('position');
+        let deltaTime = timeDelta / 1000;
+        
+        position.x += this.data.velocity.x * deltaTime;
+        position.y += this.data.velocity.y * deltaTime;
+        position.z += this.data.velocity.z * deltaTime;
+        
+        this.el.setAttribute('position', position);
+        
+        // Check collisions
+        this.checkCollisions();
+        
+        // Remove if out of bounds
+        if (position.z < -15 || position.z > 15 || Math.abs(position.x) > 15) {
+            this.destroy();
+        }
+    },
+    
+    checkCollisions: function() {
+        if (this.hasHit) return; // Prevent multiple collision checks
+        
+        let position = this.el.getAttribute('position');
+        
+        if (this.data.type === 'player') {
+            // Check alien collisions
+            let aliens = document.querySelectorAll('[alien-behavior]');
+            aliens.forEach(alien => {
+                if (this.hasHit) return; // Stop checking if we already hit something
+                
+                let alienPos = alien.getAttribute('position');
+                let distance = this.calculateDistance(position, alienPos);
+                
+                if (distance < 0.8) {
+                    this.hasHit = true;
+                    alien.components['alien-behavior'].onHit();
+                    this.destroy();
+                }
+            });
+        } else if (this.data.type === 'alien') {
+            // Check player collision - FIXED
+            let player = document.querySelector('#player');
+            if (player) {
+                let playerPos = player.getAttribute('position');
+                let distance = this.calculateDistance(position, playerPos);
+                
+                // INCREASED collision distance and improved shield check
+                if (distance < 1.5) { // Increased from 1 to 1.5 for better detection
+                    this.hasHit = true;
+                    
+                    let playerShip = player.components['player-ship'];
+                    
+                    // Check if player has shield active
+                    if (playerShip && playerShip.shielded) {
+                        console.log('🛡️ Bullet blocked by shield!');
+                        // Create shield hit effect
+                        this.createShieldHitEffect(position);
+                    } else {
+                        console.log('💥 Player hit by alien bullet!');
+                        // Player takes damage
+                        this.el.sceneEl.emit('player-hit');
+                    }
+                    
+                    this.destroy();
+                }
+            }
+        }
+    },
+    
+    createShieldHitEffect: function(position) {
+        // Create shield impact effect
+        let effect = document.createElement('a-entity');
+        effect.setAttribute('geometry', 'primitive: sphere; radius: 0.2');
+        effect.setAttribute('material', 'color: #00ffff; emissive: #00ffff; emissiveIntensity: 1; transparent: true; opacity: 0.8');
+        effect.setAttribute('position', position);
+        
+        effect.setAttribute('animation__expand', {
+            property: 'scale',
+            from: '0.1 0.1 0.1',
+            to: '2 2 2',
+            dur: 300,
+            easing: 'easeOutQuad'
+        });
+        
+        effect.setAttribute('animation__fade', {
+            property: 'material.opacity',
+            from: 0.8,
+            to: 0,
+            dur: 300,
+            easing: 'easeOutQuad'
+        });
+        
+        document.querySelector('#effects').appendChild(effect);
+        
+        setTimeout(() => {
+            if (effect.parentNode) {
+                effect.parentNode.removeChild(effect);
+            }
+        }, 300);
+    },
+    
+    calculateDistance: function(pos1, pos2) {
+        return Math.sqrt(
+            Math.pow(pos1.x - pos2.x, 2) + 
+            Math.pow(pos1.y - pos2.y, 2) + 
+            Math.pow(pos1.z - pos2.z, 2)
+        );
+    },
+    
+    destroy: function() {
+        if (this.el.parentNode) {
+            this.el.parentNode.removeChild(this.el);
+        }
+    }
+});
+
+
+        // Audio Manager Component
+        AFRAME.registerComponent('audio-manager', {
+            init: function() {
+                this.sounds = new Map();
+                this.setupSounds();
+            },
+            
+            setupSounds: function() {
+                this.createSoundEntity('shoot', '#shootSound');
+                this.createSoundEntity('alienHit', '#alienHitSound');
+                this.createSoundEntity('alienShoot', '#alienShootSound');
+                this.createSoundEntity('playerHit', '#playerHitSound');
+                this.createSoundEntity('powerUp', '#powerUpSound');
+                this.createSoundEntity('waveComplete', '#waveCompleteSound');
+                this.createSoundEntity('gameOver', '#gameOverSound');
+            },
+            
+            createSoundEntity: function(name, selector) {
+                let soundEl = document.createElement('a-entity');
+                soundEl.setAttribute('sound', `src: ${selector}; volume: 0.5; autoplay: false`);
+                this.el.appendChild(soundEl);
+                this.sounds.set(name, soundEl);
+            },
+            
+            playSound: function(soundName) {
+                let sound = this.sounds.get(soundName);
+                if (sound && sound.components.sound) {
+                    sound.components.sound.stopSound();
+                    sound.components.sound.playSound();
+                }
+            }
+        });
+
+        // Star Field Component
+        AFRAME.registerComponent('star-field', {
+            init: function() {
+                for (let i = 0; i < 100; i++) {
+                    let star = document.createElement('a-entity');
+                    star.setAttribute('position', `${(Math.random() - 0.5) * 100} ${Math.random() * 50 + 10} ${(Math.random() - 0.5) * 100}`);
+                    star.setAttribute('geometry', 'primitive: sphere; radius: 0.05');
+                    star.setAttribute('material', 'color: #ffffff; emissive: #ffffff; emissiveIntensity: 0.8');
+                    
+                    star.setAttribute('animation__twinkle', {
+                        property: 'material.emissiveIntensity',
+                        from: 0.3,
+                        to: 1.2,
+                        dur: 1000 + Math.random() * 2000,
+                        dir: 'alternate',
+                        loop: true
+                    });
+                    
+                    this.el.appendChild(star);
+                }
+            }
+        });
+
+        // Particle Effects Component
+        AFRAME.registerComponent('particle-effects', {
+            createExplosion: function(position, color) {
+                for (let i = 0; i < 8; i++) {
+                    let particle = document.createElement('a-entity');
+                    let angle = (i / 8) * Math.PI * 2;
+                    
+                    particle.setAttribute('geometry', 'primitive: sphere; radius: 0.1');
+                    particle.setAttribute('material', `color: ${color}; emissive: ${color}`);
+                    particle.setAttribute('position', position);
+                    
+                    particle.setAttribute('animation__explode', {
+                        property: 'position',
+                        to: `${position.x + Math.cos(angle) * 2} ${position.y + Math.sin(angle) * 2} ${position.z}`,
+                        dur: 800,
+                        easing: 'easeOutQuad'
+                    });
+                    
+                    particle.setAttribute('animation__fade', {
+                        property: 'material.opacity',
+                        from: 1,
+                        to: 0,
+                        dur: 800
+                    });
+                    
+                    this.el.appendChild(particle);
+                    
+                    setTimeout(() => {
+                        if (particle.parentNode) {
+                            particle.parentNode.removeChild(particle);
+                        }
+                    }, 800);
+                }
+            }
+        });
+
+        // Global Functions
+        function restartGame() {
+            location.reload();
+        }
+
+        // Initialize Game
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('👾 Alien Invaders VR initialized!');
+            console.log('🎮 Use A/D to move, SPACE to shoot, P to pause');
+            console.log('🎯 Defend Earth from the alien invasion!');
+            
+            if (AFRAME.utils.device.isMobile()) {
+                // Add mobile controls
+                let mobileControls = document.createElement('div');
+                mobileControls.innerHTML = `
+                    <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1001;">
+                        <button style="padding: 15px; margin: 5px; background: #00ff00; color: black; border: none; border-radius: 5px;" 
+                                ontouchstart="moveLeft()" ontouchend="stopMove()">◀ LEFT</button>
+                        <button style="padding: 15px; margin: 5px; background: #ff0000; color: white; border: none; border-radius: 5px;" 
+                                ontouchstart="shoot()">🚀 SHOOT</button>
+                        <button style="padding: 15px; margin: 5px; background: #00ff00; color: black; border: none; border-radius: 5px;" 
+                                ontouchstart="moveRight()" ontouchend="stopMove()">RIGHT ▶</button>
+                    </div>
+                `;
+                document.body.appendChild(mobileControls);
+            }
+        });
+
+        // Mobile control functions
+        function moveLeft() {
+            let gameManager = document.querySelector('#gameManager').components['alien-invaders-manager'];
+            gameManager.movePlayer(-1);
+        }
+
+        function moveRight() {
+            let gameManager = document.querySelector('#gameManager').components['alien-invaders-manager'];
+            gameManager.movePlayer(1);
+        }
+
+        function shoot() {
+            let gameManager = document.querySelector('#gameManager').components['alien-invaders-manager'];
+            gameManager.playerShoot();
+        }
+
+        function stopMove() {
+            // Stop continuous movement if implemented
+        }
+
+    </script>
+</body>
+</html>
