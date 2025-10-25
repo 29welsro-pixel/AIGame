@@ -150,8 +150,8 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 75%;
+            height: 75%;
             background: rgba(0,0,0,0.95);
             display: none;
             flex-direction: column;
@@ -368,21 +368,21 @@
             <a-entity id="ship-model">
                 <!-- Main body -->
                 <a-box width="0.8" height="0.2" depth="1.2" 
-                       color="#00aaff" 
+                       color="#D3D3D3" 
                        material="metalness: 0.8; roughness: 0.2; emissive: #0066aa; emissiveIntensity: 0.2">
                 </a-box>
                 
                 <!-- Wings -->
                 <a-box width="1.6" height="0.1" depth="0.4" 
                        position="0 0 0.2"
-                       color="#0088cc" 
+                       color="#D3D3D3" 
                        material="metalness: 0.7; roughness: 0.3">
                 </a-box>
                 
                 <!-- Cockpit -->
                 <a-sphere radius="0.2" 
                           position="0 0.2 -0.2"
-                          color="#ffffff" 
+                          color="#708090" 
                           material="transparent: true; opacity: 0.6">
                 </a-sphere>
                 
@@ -946,7 +946,7 @@ AFRAME.registerComponent('player-ship', {
                     property: 'scale',
                     from: '1 1 1',
                     to: '1.1 1.1 1.1',
-                    dur: 2000,
+                    dur: 3000,
                     dir: 'alternate',
                     loop: true
                 });
@@ -1116,12 +1116,12 @@ AFRAME.registerComponent('projectile-behavior', {
         }
     },
     
-    createShieldHitEffect: function(position) {
-        // Create shield impact effect
+      // Create shield impact effect
         let effect = document.createElement('a-entity');
-        effect.setAttribute('geometry', 'primitive: sphere; radius: 0.2');
+        effect.setAttribute('geometry', 'primitive: sphere; radius: 0.3');
         effect.setAttribute('material', 'color: #00ffff; emissive: #00ffff; emissiveIntensity: 1; transparent: true; opacity: 0.8');
-        effect.setAttribute('position', position);
+        effect.setAttribute('position', position);reateShieldHitEffect: function(position) {
+
         
         effect.setAttribute('animation__expand', {
             property: 'scale',
@@ -1210,7 +1210,7 @@ AFRAME.registerComponent('projectile-behavior', {
                         property: 'material.emissiveIntensity',
                         from: 0.3,
                         to: 1.2,
-                        dur: 1000 + Math.random() * 2000,
+                        dur: 500 + Math.random() * 2000,
                         dir: 'alternate',
                         loop: true
                     });
